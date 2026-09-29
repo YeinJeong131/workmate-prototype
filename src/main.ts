@@ -137,6 +137,9 @@ function draftFor(p: Person, kind: "email" | "teams"): string {
 }
 
 const icon = {
+  chat: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a1 1 0 011 1v9a1 1 0 01-1 1h-8l-4.5 3.5V16H5a1 1 0 01-1-1V6a1 1 0 011-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8 9.5h8M8 12.5h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
+  mail: `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="13" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 7l8 6 8-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>`,
+  bolt: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3L5 13.5h6L10 21l8-10.5h-6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>`,
   send: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l15-7-5 15-2.5-6.5L4 12z" fill="currentColor"/></svg>`,
   back: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   external: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
@@ -532,9 +535,11 @@ body.addEventListener("input", (e) => {
   if (t.id === "q") state.question = t.value;
 });
 
+const introElRef = (): HTMLElement | null => document.getElementById("intro");
+
 // Filming helper: press the backtick key (`) on the first screen to auto-type the example question.
 document.addEventListener("keydown", (e) => {
-  if (e.key !== "`" || state.screen !== "ask") return;
+  if (e.key !== "`" || state.screen !== "ask" || !introElRef()?.hidden) return;
   const q = document.getElementById("q") as HTMLTextAreaElement | null;
   if (!q) return;
   e.preventDefault();
@@ -556,4 +561,98 @@ document.querySelectorAll<HTMLElement>("[data-fill]").forEach((n) => {
   n.textContent = CONFIG[key];
 });
 
+// ---------- first-time tutorial ----------
+
+const INTRO_STEPS: { art: keyof typeof icon; title: string; body: string }[] = [
+  {
+    art: "chat",
+    title: `Welcome to ${CONFIG.appName}`,
+    body: "Ask any work question, just like you would in any AI chat.",
+  },
+  {
+    art: "people",
+    title: "Sometimes a person is the better answer",
+    body: "For questions about how things work here, I'll suggest a colleague who has done it before, show why, and whether they're free right now.",
+  },
+  {
+    art: "mail",
+    title: "Reach out your way",
+    body: "Message on Teams, send an email or meet in person. I can draft the first message for you.",
+  },
+  {
+    art: "bolt",
+    title: "You're always in control",
+    body: "Need it fast? An instant AI answer is always one click away.",
+  },
+];
+
+const introEl = document.getElementById("intro") as HTMLElement;
+const helpBtn = document.getElementById("help") as HTMLButtonElement;
+const INTRO_KEY = "workmate-intro-seen";
+let introStep = 0;
+
+function renderIntro(): void {
+  const step = INTRO_STEPS[introStep];
+  const last = introStep === INTRO_STEPS.length - 1;
+  introEl.innerHTML = `
+    <div class="intro-inner">
+      <button class="intro-skip" data-intro="skip">${last ? "" : "Skip"}</button>
+      <div class="intro-art">${icon[step.art]}</div>
+      <p class="intro-count">${introStep + 1} of ${INTRO_STEPS.length}</p>
+      <h2 class="intro-title" id="intro-title" tabindex="-1">${esc(step.title)}</h2>
+      <p class="intro-body">${esc(step.body)}</p>
+      <div class="intro-dots" aria-hidden="true">
+        ${INTRO_STEPS.map((_, i) => `<span class="${i === introStep ? "on" : ""}"></span>`).join("")}
+      </div>
+      <div class="intro-actions">
+        ${introStep > 0 ? `<button class="btn quiet" data-intro="prev">Back</button>` : ""}
+        <button class="btn primary" data-intro="${last ? "done" : "next"}">${last ? "Get started" : "Next"}</button>
+      </div>
+    </div>`;
+  (introEl.querySelector("#intro-title") as HTMLElement).focus({ preventScroll: true });
+}
+
+function openIntro(): void {
+  introStep = 0;
+  introEl.hidden = false;
+  renderIntro();
+}
+
+function closeIntro(): void {
+  introEl.hidden = true;
+  try {
+    localStorage.setItem(INTRO_KEY, "1");
+  } catch {
+    /* storage may be unavailable */
+  }
+  const q = document.getElementById("q");
+  (q ?? helpBtn).focus();
+}
+
+introEl.addEventListener("click", (e) => {
+  const b = (e.target as HTMLElement).closest<HTMLElement>("[data-intro]");
+  if (!b) return;
+  const a = b.dataset.intro;
+  if (a === "next") introStep++;
+  else if (a === "prev") introStep--;
+  else return closeIntro();
+  renderIntro();
+});
+
+introEl.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeIntro();
+  if (e.key === "ArrowRight" && introStep < INTRO_STEPS.length - 1) { introStep++; renderIntro(); }
+  if (e.key === "ArrowLeft" && introStep > 0) { introStep--; renderIntro(); }
+});
+
+helpBtn.addEventListener("click", openIntro);
+
 render();
+
+let seen = false;
+try {
+  seen = localStorage.getItem(INTRO_KEY) === "1";
+} catch {
+  /* storage may be unavailable */
+}
+if (!seen) openIntro();

@@ -52,6 +52,7 @@ body {
 p { margin: 0; }
 button, textarea { font: inherit; color: inherit; }
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+[tabindex="-1"]:focus { outline: none; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 svg { width: 1.1em; height: 1.1em; flex: none; }
 
@@ -101,6 +102,30 @@ svg { width: 1.1em; height: 1.1em; flex: none; }
 .mark svg { width: 18px; height: 18px; }
 .panel-name { font-family: var(--display); font-weight: 700; font-size: 19px; letter-spacing: -0.01em; }
 .ext-badge { margin-left: auto; font-size: 13px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; }
+.help {
+  width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid var(--line); background: var(--surface);
+  font-weight: 700; cursor: pointer; color: var(--muted);
+}
+.help:hover { color: var(--ink); border-color: var(--ink); }
+.intro { position: absolute; inset: 59px 0 0 0; z-index: 5; background: var(--surface); display: flex; }
+.intro[hidden] { display: none; }
+.intro-inner {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+  padding: 28px 28px 32px; gap: 12px; position: relative; animation: enter 240ms ease-out;
+}
+.intro-skip { position: absolute; top: 16px; right: 20px; border: 0; background: none; color: var(--muted); font-weight: 700; cursor: pointer; min-height: 24px; }
+.intro-art {
+  width: 104px; height: 104px; border-radius: 50%; display: grid; place-items: center; margin-bottom: 8px;
+  background: var(--connect-soft); color: var(--connect); border: 1.5px solid var(--connect);
+}
+.intro-art svg { width: 48px; height: 48px; }
+.intro-count { font-size: 14px; font-weight: 700; color: var(--connect); }
+.intro-title { font-family: var(--display); font-weight: 700; font-size: 26px; line-height: 1.2; letter-spacing: -0.02em; margin: 0; max-width: 16ch; outline: none; }
+.intro-body { color: var(--muted); font-size: 18px; max-width: 30ch; }
+.intro-dots { display: flex; gap: 8px; margin: 12px 0 8px; }
+.intro-dots span { width: 8px; height: 8px; border-radius: 999px; background: var(--line); transition: width 200ms, background-color 200ms; }
+.intro-dots span.on { width: 24px; background: var(--connect); }
+.intro-actions { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 10px; width: 100%; max-width: 320px; }
 .panel-body { flex: 1; overflow-y: auto; padding: 20px 20px 28px; }
 
 .screen { display: flex; flex-direction: column; gap: 14px; min-height: 100%; animation: enter 220ms ease-out; }
@@ -303,8 +328,10 @@ svg { width: 1.1em; height: 1.1em; flex: none; }
       <span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="8" cy="9" r="3" fill="currentColor"/><circle cx="16" cy="9" r="3" fill="currentColor" opacity=".6"/><path d="M3 19c.8-3 2.8-4.5 5-4.5s4.2 1.5 5 4.5M11 19c.8-3 2.8-4.5 5-4.5s4.2 1.5 5 4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>
       <span class="panel-name" data-fill="appName">Workmate</span>
       <span class="ext-badge">Company extension</span>
+      <button class="help" id="help" aria-label="How Workmate works" title="How Workmate works">?</button>
     </header>
     <div class="panel-body" id="panel-body" aria-live="polite"></div>
+    <div class="intro" id="intro" hidden role="dialog" aria-modal="true" aria-labelledby="intro-title"></div>
     <div class="toast" id="toast" role="status"></div>
   </aside>
 </div>
@@ -401,6 +428,9 @@ Thanks,
 ${CONFIG.userName}`;
   }
   var icon = {
+    chat: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a1 1 0 011 1v9a1 1 0 01-1 1h-8l-4.5 3.5V16H5a1 1 0 01-1-1V6a1 1 0 011-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8 9.5h8M8 12.5h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>`,
+    mail: `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5.5" width="17" height="13" rx="1.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 7l8 6 8-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>`,
+    bolt: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3L5 13.5h6L10 21l8-10.5h-6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>`,
     send: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12l15-7-5 15-2.5-6.5L4 12z" fill="currentColor"/></svg>`,
     back: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
     external: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
@@ -747,8 +777,10 @@ ${CONFIG.userName}`;
     if (t.id === "draft") state.draft = t.value;
     if (t.id === "q") state.question = t.value;
   });
+  var introElRef = () => document.getElementById("intro");
   document.addEventListener("keydown", (e) => {
-    if (e.key !== "`" || state.screen !== "ask") return;
+    var _a;
+    if (e.key !== "`" || state.screen !== "ask" || !((_a = introElRef()) == null ? void 0 : _a.hidden)) return;
     const q = document.getElementById("q");
     if (!q) return;
     e.preventDefault();
@@ -767,7 +799,94 @@ ${CONFIG.userName}`;
     const key = n.dataset.fill;
     n.textContent = CONFIG[key];
   });
+  var INTRO_STEPS = [
+    {
+      art: "chat",
+      title: `Welcome to ${CONFIG.appName}`,
+      body: "Ask any work question, just like you would in any AI chat."
+    },
+    {
+      art: "people",
+      title: "Sometimes a person is the better answer",
+      body: "For questions about how things work here, I'll suggest a colleague who has done it before, show why, and whether they're free right now."
+    },
+    {
+      art: "mail",
+      title: "Reach out your way",
+      body: "Message on Teams, send an email or meet in person. I can draft the first message for you."
+    },
+    {
+      art: "bolt",
+      title: "You're always in control",
+      body: "Need it fast? An instant AI answer is always one click away."
+    }
+  ];
+  var introEl = document.getElementById("intro");
+  var helpBtn = document.getElementById("help");
+  var INTRO_KEY = "workmate-intro-seen";
+  var introStep = 0;
+  function renderIntro() {
+    const step = INTRO_STEPS[introStep];
+    const last = introStep === INTRO_STEPS.length - 1;
+    introEl.innerHTML = `
+    <div class="intro-inner">
+      <button class="intro-skip" data-intro="skip">${last ? "" : "Skip"}</button>
+      <div class="intro-art">${icon[step.art]}</div>
+      <p class="intro-count">${introStep + 1} of ${INTRO_STEPS.length}</p>
+      <h2 class="intro-title" id="intro-title" tabindex="-1">${esc(step.title)}</h2>
+      <p class="intro-body">${esc(step.body)}</p>
+      <div class="intro-dots" aria-hidden="true">
+        ${INTRO_STEPS.map((_, i) => `<span class="${i === introStep ? "on" : ""}"></span>`).join("")}
+      </div>
+      <div class="intro-actions">
+        ${introStep > 0 ? `<button class="btn quiet" data-intro="prev">Back</button>` : ""}
+        <button class="btn primary" data-intro="${last ? "done" : "next"}">${last ? "Get started" : "Next"}</button>
+      </div>
+    </div>`;
+    introEl.querySelector("#intro-title").focus({ preventScroll: true });
+  }
+  function openIntro() {
+    introStep = 0;
+    introEl.hidden = false;
+    renderIntro();
+  }
+  function closeIntro() {
+    introEl.hidden = true;
+    try {
+      localStorage.setItem(INTRO_KEY, "1");
+    } catch {
+    }
+    const q = document.getElementById("q");
+    (q != null ? q : helpBtn).focus();
+  }
+  introEl.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-intro]");
+    if (!b) return;
+    const a = b.dataset.intro;
+    if (a === "next") introStep++;
+    else if (a === "prev") introStep--;
+    else return closeIntro();
+    renderIntro();
+  });
+  introEl.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeIntro();
+    if (e.key === "ArrowRight" && introStep < INTRO_STEPS.length - 1) {
+      introStep++;
+      renderIntro();
+    }
+    if (e.key === "ArrowLeft" && introStep > 0) {
+      introStep--;
+      renderIntro();
+    }
+  });
+  helpBtn.addEventListener("click", openIntro);
   render();
+  var seen = false;
+  try {
+    seen = localStorage.getItem(INTRO_KEY) === "1";
+  } catch {
+  }
+  if (!seen) openIntro();
 })();
 </script>
 </body>
