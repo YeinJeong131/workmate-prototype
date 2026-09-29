@@ -11,7 +11,13 @@ interface Person {
   status: Status;
   statusText: string;
   why: string;
+  qualifications: string[];
   email: string;
+  workingHours: string;
+  officeDays: string;
+  location: string;
+  atDesk: boolean;
+  nextInOffice: string;
   slots: string[];
 }
 
@@ -28,7 +34,13 @@ const CONFIG = {
       status: "available",
       statusText: "Available now",
       why: "Works with client approvals",
+      qualifications: ["Bachelor of Business", "6 years in client management", "40+ client approvals handled"],
       email: "sarah.kim@company.com",
+      workingHours: "Mon to Fri, 9am to 5pm",
+      officeDays: "Mon, Wed, Thu",
+      location: "Level 5, Desk 12",
+      atDesk: true,
+      nextInOffice: "",
       slots: ["11:30 am", "2:00 pm", "4:15 pm"],
     },
     {
@@ -38,7 +50,13 @@ const CONFIG = {
       status: "busy",
       statusText: "Busy until 3pm",
       why: "Handled 5 client requests this year",
+      qualifications: ["Bachelor of Commerce", "4 years as an Account Manager"],
       email: "david.smith@company.com",
+      workingHours: "Mon to Fri, 8:30am to 4:30pm",
+      officeDays: "Tue, Thu",
+      location: "Level 3, Desk 4",
+      atDesk: false,
+      nextInOffice: "Thursday, 8:30am",
       slots: ["3:15 pm", "4:30 pm"],
     },
     {
@@ -48,7 +66,13 @@ const CONFIG = {
       status: "away",
       statusText: "In meetings today",
       why: "Approves client requests for your team",
+      qualifications: ["Master of Business Administration", "Leads the client team"],
       email: "emma.park@company.com",
+      workingHours: "Mon to Fri, 9am to 5:30pm",
+      officeDays: "Mon to Fri",
+      location: "Level 5, Room 5.02",
+      atDesk: false,
+      nextInOffice: "Tomorrow, 9am",
       slots: ["Tomorrow 9:30 am", "Tomorrow 1:00 pm"],
     },
   ] as Person[],
@@ -141,7 +165,10 @@ function personCard(p: Person): string {
       </div>
       <span class="status status-${p.status}"><i aria-hidden="true"></i>${esc(p.statusText)}</span>
     </div>
-    <p class="why"><strong>Why ${esc(firstName(p))}?</strong> ${esc(p.why)}</p>
+    <div class="why">
+      <p><strong>Why ${esc(firstName(p))}?</strong> ${esc(p.why)}</p>
+      <ul class="quals">${p.qualifications.map((q) => `<li>${esc(q)}</li>`).join("")}</ul>
+    </div>
     <button class="select ${isSel ? "on" : ""}" data-select="${p.id}" aria-pressed="${isSel}">
       ${isSel ? `${icon.check}<span>Selected</span>` : `<span>Select</span>`}
     </button>
@@ -254,6 +281,11 @@ function screenEmail(): string {
     </div>
 
     <div class="field">
+      <p class="field-label">Working hours</p>
+      <p class="info-line">${esc(p.workingHours)}</p>
+    </div>
+
+    <div class="field">
       <label class="field-label" for="draft">Suggested message</label>
       <p class="ai-note">${icon.spark}Drafted by AI. You can edit it before sending.</p>
       <textarea id="draft" rows="9">${esc(state.draft)}</textarea>
@@ -296,7 +328,23 @@ function screenMeet(): string {
   <div class="screen">
     ${backLink("people", "Back to connection options")}
     <h2 class="title">Meet ${esc(firstName(p))} in person</h2>
-    <p class="reply-body">Free times from ${esc(firstName(p))}'s calendar. Each invite is 10 minutes, so it stays easy to say yes.</p>
+
+    <div class="presence ${p.atDesk ? "here" : "gone"}">
+      <span class="light" aria-hidden="true"></span>
+      <div>
+        <p class="presence-head">${p.atDesk ? "In the office now" : "Not at their desk right now"}</p>
+        <p class="presence-sub">${p.atDesk ? "Ready for questions" : `Next in the office: ${esc(p.nextInOffice)}`}</p>
+      </div>
+    </div>
+
+    <dl class="office">
+      <div><dt>Where</dt><dd>${esc(p.location)}</dd></div>
+      <div><dt>In the office</dt><dd>${esc(p.officeDays)}</dd></div>
+      <div><dt>Working hours</dt><dd>${esc(p.workingHours)}</dd></div>
+    </dl>
+
+    <p class="field-label">Pick a time</p>
+    <p class="reply-body">Free times from ${esc(firstName(p))}'s calendar. Each chat is 10 minutes, so it stays easy to say yes.</p>
 
     <div class="slots" role="radiogroup" aria-label="Pick a time">
       ${p.slots
